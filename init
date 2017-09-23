@@ -5,18 +5,19 @@ CRYPTDEV=/dev/nbd1
 ROOTDEV=/dev/mapper/${CRYPTDEV}2
 
 cd $ROOT
-mkdir -p dev
-mkdir -p sys
-mkdir -p proc
-mount --bind /dev dev
-mount --bind /sys sys
-mount --bind /proc proc
-echo "Going to chroot to $ROOT..."
-chroot . /bin/bash << '__EOC__'
+#mkdir -p dev
+#mkdir -p sys
+#mkdir -p proc
+#mount --bind /dev dev
+#mount --bind /sys sys
+#mount --bind /proc proc
+#echo "Going to chroot to $ROOT..."
+#chroot . /bin/bash << '__EOC__'
 
 echo "Syncing kernel modules from scw..."
-export PATH=/sbin:/bin:/usr/sbin:/usr/bin
+#export PATH=/sbin:/bin:/usr/sbin:/usr/bin
 /oc-sync-kernel-modules
+echo "Loading kernel modules ..."
 depmod -a
 modprobe dm-mod
 modprobe dm-crypt
@@ -25,11 +26,13 @@ modprobe btrfs
 echo "Starting mount real root device:"
 cryptsetup open /dev/nbd1 cryptroot
 partprobe /dev/mapper/cryptroot
-mkdir /mnt
-mount -o subvol=root /dev/mapper/cryptrooot2 /mnt
-
-__EOC__
-
-#umount dev
-#umount sys
-#umount proc
+lsblk
+mkdir -p /mnt
+mount -o subvol=root /dev/mapper/cryptroot2 /mnt
+df
+/bin/bash
+echo "Now switching to real root"
+sleep 2
+exec switch_root /mnt /sbin/init "$@"
+echo "SOMETHING IS WRONG !!! Should not be here !!!"
+/bin/bash
