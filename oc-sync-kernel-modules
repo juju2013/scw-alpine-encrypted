@@ -8,6 +8,7 @@ DIR=/lib/modules
 mkdir -p $DIR
 TMP_DIR=`mktemp -d -p $DIR`
 KVERSION=`uname -r`
+KARCH=`uname -m`
 TIMEOUT=10
 
 export PATH="${PATH:+$PATH:}/usr/bin:/bin:/usr/local/bin:/sbin:/usr/sbin:/usr/local/sbin"
@@ -24,8 +25,8 @@ then
   # find . -name "*.ko" -size 0 -delete
   wget --timeout=${TIMEOUT} --quiet --no-check-certificate -r --no-parent \
      --reject "index.html*" --reject "robots.txt" \
-     --no-host-directories --cut-dirs 3 --directory-prefix \
-     $TMP_DIR http://169.254.42.24/kernel/${KVERSION}/modules/${KVERSION}/
+     --no-host-directories --cut-dirs 4 --directory-prefix \
+     $TMP_DIR http://169.254.42.24/kernel/${KARCH}/${KVERSION}/modules/${KVERSION}/
 
   if [ $? -eq 0 ]
   then
@@ -33,3 +34,9 @@ then
     mv $TMP_DIR/${KVERSION} $DIR
   fi
 fi
+
+depmod -a
+modprobe dm-mod
+modprobe dm-crypt
+modprobe btrfs
+

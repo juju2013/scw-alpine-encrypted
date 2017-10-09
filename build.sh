@@ -18,11 +18,11 @@ mkdir -p $DST
 TAR=/usr/bin/tar
 export MIRROR=http://nl.alpinelinux.org/alpine
 #export MIRROR=http://liskamm.alpinelinux.uk
-export APKTOOL=apk-tools-static-2.7.2-r0.apk
+export APKTOOL=apk-tools-static-2.8.0-r0.apk
 export IMG=`dd if=/dev/urandom bs=4K count=1 status=none | sha1sum | cut -d ' ' -f 1`.tar
 export iIMG=`dd if=/dev/urandom bs=4K count=1 status=none | sha1sum | cut -d ' ' -f 1`.tar
-export  IMG=scwx64root.tar
-export iIMG=scwx64init.tar
+export  IMG=scwc1root.tar
+export iIMG=scwc1init.tar
 export ROOTFS=$(mktemp -d $DST/.rootfs-alpinelinux-XXXXXXXXXX)
 export INITFS=$(mktemp -d $DST/.initfs-alpinelinux-XXXXXXXXXX)
 chmod 755 $ROOTFS
@@ -30,7 +30,7 @@ mkdir $ROOTFS/tmp
 
 echo "Building base image from $MIRROR..."
 pushd $ROOTFS/tmp
-wget -O $APKTOOL $MIRROR/edge/main/$(uname -m)/$APKTOOL
+wget -O $APKTOOL $MIRROR/edge/main/armhf/$APKTOOL
 tar -xzf $APKTOOL
 popd
 sudo bash <<_EOF_

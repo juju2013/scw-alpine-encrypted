@@ -1,8 +1,9 @@
 #! /bin/sh
 
 ROOT=/newroot
-CRYPTDEV=/dev/nbd1
-ROOTDEV=/dev/mapper/${CRYPTDEV}2
+CRYPTNAME=cryptroot
+CRYPTDEV=/dev/nbd0
+ROOTDEV=/dev/mapper/${CRYPTNAME}
 
 cd $ROOT
 #mkdir -p dev
@@ -24,11 +25,11 @@ modprobe dm-crypt
 modprobe btrfs
 
 echo "Starting mount real root device:"
-cryptsetup open /dev/nbd1 cryptroot
-partprobe /dev/mapper/cryptroot
+cryptsetup open $CRYPTDEV $CRYPTNAME
+partprobe $ROOTDEV
 lsblk
 mkdir -p /mnt
-mount -o subvol=root /dev/mapper/cryptroot2 /mnt
+mount -o subvol=root $ROOTDEV /mnt
 df
 /bin/bash
 echo "Now switching to real root"
