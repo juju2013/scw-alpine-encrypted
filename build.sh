@@ -1,7 +1,7 @@
 # !/usr/bin/env bash
 # Build a custom alpine arm image
-# This image is supposed to run on a [C1](http://scaleway.com/) server
-# Copyright (c) 2015 juju2013@github
+# This image is supposed to run on a [ARM64](http://scaleway.com/) instance
+# Copyright (c) 2019 juju2013@github
 
 export DESTINATION_URL=http://bootserver/
 if [ -z "$DESTINATION_URL" ]; then
@@ -9,20 +9,26 @@ if [ -z "$DESTINATION_URL" ]; then
 	exit 1
 fi
 
-export DST=`pwd`/out
+export DST=$(pwd)/out
 echo "Cleaning ..."
 sudo rm -rf $DST/.initfs* 
 sudo rm -rf $DST/.rootfs* 
 mkdir -p $DST
 
-TAR=/usr/bin/tar
-export MIRROR=http://nl.alpinelinux.org/alpine
-#export MIRROR=http://liskamm.alpinelinux.uk
-export APKTOOL=apk-tools-static-2.7.2-r0.apk
-export IMG=`dd if=/dev/urandom bs=4K count=1 status=none | sha1sum | cut -d ' ' -f 1`.tar
-export iIMG=`dd if=/dev/urandom bs=4K count=1 status=none | sha1sum | cut -d ' ' -f 1`.tar
-export  IMG=scwx64root.tar
-export iIMG=scwx64init.tar
+TAR=$(which tar)
+export ARCH=$(uname -m)
+export MIRROR=http://nl.alpinelinux.org/alpine/latest-stable
+export APKTOOLS=$(wget --quiet -O - $MIRROR/main/$ARCH/ | grep apk-tools-static | cut -d '"' -f 2)
+if [ -z "$APKTOOLS" ]; then
+  echo Cannot find apk-tools, maybe consider another mirror ?
+  exit 1
+fi
+# cache apk-tools
+if [ ! -f ~/$APKTOOLS ]; then
+  wget --quiet -O ~/$APKTOOLS $MIRROR/main/${ARCH}/$APKTOOLS
+fi
+export  IMG=${ARCH}root.tar
+export iIMG=${ARCH}init.tar
 export ROOTFS=$(mktemp -d $DST/.rootfs-alpinelinux-XXXXXXXXXX)
 export INITFS=$(mktemp -d $DST/.initfs-alpinelinux-XXXXXXXXXX)
 chmod 755 $ROOTFS
@@ -30,11 +36,10 @@ mkdir $ROOTFS/tmp
 
 echo "Building base image from $MIRROR..."
 pushd $ROOTFS/tmp
-wget -O $APKTOOL $MIRROR/edge/main/$(uname -m)/$APKTOOL
-tar -xzf $APKTOOL
+tar -xpf ~/$APKTOOLS
 popd
 sudo bash <<_EOF_
-$ROOTFS/tmp/sbin/apk.static -v -X $MIRROR/edge/main -U --allow-untrusted --root $ROOTFS --initdb add alpine-base iproute2
+$ROOTFS/tmp/sbin/apk.static -v -X $MIRROR/main -U --allow-untrusted --root $ROOTFS --initdb add alpine-base iproute2
 mknod -m 666 $ROOTFS/dev/full c 1 7 
 mknod -m 666 $ROOTFS/dev/ptmx c 5 2 
 mknod -m 644 $ROOTFS/dev/random c 1 8 
@@ -54,8 +59,8 @@ cp init ${INITFS}/sbin/
 chmod 0755 $ROOTFS/root/chroot.sh
 cp oc-sync-kernel-modules $INITFS/
 cp oc-sync-kernel-modules $ROOTFS/usr/local/bin/
-sed -i 's/#ttyS0::.*/ttyS0::respawn:\/sbin\/getty -L ttyS0 9600 vt102/' $ROOTFS/etc/inittab
-echo "$MIRROR/latest-stable/main" > $ROOTFS/etc/apk/repositories
+sed -i 's/#ttyS0::.*/ttyAMA0::respawn:\/sbin\/getty -L ttyAMA0 9600 vt102/' $ROOTFS/etc/inittab
+echo "$MIRROR/main" > $ROOTFS/etc/apk/repositories
 _EOF_
 
 echo "Chrooting ..."
@@ -107,8 +112,8 @@ echo Finished!
 
 cat << __EOF__
 To buil the target server:
-  * upload $iIMG and $IMG, to $DESTINATION_URL
-  * create a new C1 instance and add 'INIRD_POST_SHELL=1' tag to it
+  * upload $iIMG and $IMG, to your boot server: $DESTINATION_URL
+  * create a new ${ARCH} instance and add 'INIRD_POST_SHELL=1' tag to it
   * boot, connect to the console, then follow the README !
 __EOF__
 
